@@ -1,0 +1,13 @@
+# IDE
+.idea/
+.claude
+.opencode/
+.flowcode/
+.cursor
+
+# Logs
+logs/
+
+# Build output
+/sqlite
+/bin/
