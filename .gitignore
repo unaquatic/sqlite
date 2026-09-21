@@ -1,6 +1,7 @@
-# IDE
+# IDE / agent scratch
 .idea/
 .claude
+.claude/
 .opencode/
 .flowcode/
 .cursor
@@ -9,5 +10,4 @@
 logs/
 
 # Build output
-/sqlite
 /bin/
