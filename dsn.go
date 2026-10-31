@@ -30,7 +30,8 @@ type config struct {
 // journalModes are the values _journal_mode accepts, in any case.
 var journalModes = []string{"DELETE", "TRUNCATE", "PERSIST", "MEMORY", "WAL", "OFF"}
 
-// parseDSN parses and validates dsn. See [Driver.Open] for the parameters.
+// parseDSN parses and validates dsn. The package documentation describes the
+// parameters.
 func parseDSN(dsn string) (*config, error) {
 	cfg := &config{name: dsn}
 

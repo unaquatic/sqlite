@@ -12,7 +12,7 @@
   <a href="https://github.com/unaquatic/sqlite/blob/main/LICENSE"><img src="https://img.shields.io/github/license/unaquatic/sqlite?labelColor=888&color=555&style=flat-square" alt="License"></a>
 </p>
 
-<p align="center"><b>A cgo-free SQLite driver written in golang.</b></p>
+<p align="center"><b>A modern sqlite driver written in golang.</b></p>
 
 ---
 
@@ -145,11 +145,14 @@ driver registered as `sqlite`. Removed with it:
 - Column type metadata (`rows.ColumnTypes()` reports names only), the
   shared-cache unlock-notify retry, `ErrorCodeString` and `Version`.
 - The `lib` package, the transpiled C API, now `internal/lib`.
+- The exported `Driver` and `Error` types. The package exports nothing; an
+  error SQLite reports still has a `Code() int` method, which
+  `errors.As(err, &e)` with `var e interface{ Code() int }` reaches.
 
 What remains: `sql.Open("sqlite", dsn)` with the `_pragma`, `_journal_mode`
-and `_txlock` DSN parameters documented on `Driver.Open`, plus `Driver` and
-`Error`. OFD locking can still be enabled with `MODERNC_SQLITE_OFD_LOCK=1`,
-which the SQLite core reads itself.
+and `_txlock` DSN parameters documented in the package documentation. OFD
+locking can still be enabled with `MODERNC_SQLITE_OFD_LOCK=1`, which the SQLite
+core reads itself.
 
 Generated sources (deduplication)
 ---------------------------------

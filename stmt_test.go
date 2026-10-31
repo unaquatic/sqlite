@@ -8,12 +8,13 @@ import (
 	"bytes"
 	"context"
 	"database/sql"
-	"errors"
 	"fmt"
 	"reflect"
 	"strings"
 	"testing"
 	"time"
+
+	sqlite3 "github.com/unaquatic/sqlite/internal/lib"
 )
 
 // bindRunners query through the database and through a prepared statement,
@@ -518,9 +519,8 @@ func TestConstraintErrors(t *testing.T) {
 			if err == nil || err.Error() != tc.want {
 				t.Fatalf("got error %v, want %q", err, tc.want)
 			}
-			var e *Error
-			if !errors.As(err, &e) {
-				t.Fatalf("got %T, want *Error", err)
+			if code, _ := errorCode(err); code&0xff != sqlite3.SQLITE_CONSTRAINT {
+				t.Fatalf("got code %d, want an SQLITE_CONSTRAINT code", code)
 			}
 		})
 	}

@@ -11,19 +11,17 @@ import (
 	"github.com/unaquatic/sqlite/internal/libc"
 )
 
-// Error is an error reported by SQLite.
-type Error struct {
+// sqliteError is an error reported by SQLite. Callers reach its Code through
+// an interface; see "Errors" in the package documentation.
+type sqliteError struct {
 	msg  string
 	code int
 }
 
-// Error implements error.
-func (e *Error) Error() string { return e.msg }
+func (e *sqliteError) Error() string { return e.msg }
 
-// Code returns the SQLite result code, extended where SQLite reports one,
-// such as 2067 for SQLITE_CONSTRAINT_UNIQUE. See
-// https://www.sqlite.org/rescode.html.
-func (e *Error) Code() int { return e.code }
+// Code returns the SQLite result code, extended where SQLite reports one.
+func (e *sqliteError) Code() int { return e.code }
 
 // errstr returns the error for result code rc of an operation on c.
 func (c *conn) errstr(rc int32) error { return newError(c.tls, c.db, rc) }
@@ -50,5 +48,5 @@ func newError(tls *libc.TLS, db uintptr, rc int32) error {
 	if rc == sqlite3.SQLITE_BUSY {
 		msg += " (SQLITE_BUSY)"
 	}
-	return &Error{msg: msg, code: int(rc)}
+	return &sqliteError{msg: msg, code: int(rc)}
 }

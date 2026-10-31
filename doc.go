@@ -8,8 +8,9 @@
 // SQLite is an in-process implementation of a self-contained, serverless,
 // zero-configuration, transactional SQL database engine.
 //
-// The package's only entry point is the database/sql driver it registers as
-// "sqlite"; see [Driver.Open] for the DSN parameters it accepts.
+// The package exports nothing. Importing it registers a database/sql driver
+// named "sqlite"; see "Connecting to a database" for the DSN it accepts and
+// "Errors" for reading SQLite's result codes.
 //
 // # OFD locking (Linux)
 //
@@ -122,7 +123,43 @@
 //
 //	db, err := sql.Open("sqlite", "file:app.db?_pragma=foreign_keys(1)")
 //
-// See [Driver.Open] for the DSN parameters.
+// The DSN is a filename, such as "/tmp/app.db", or a URI, such as
+// "file:/tmp/app.db?mode=ro". Parameters follow a '?'. SQLite reads its own,
+// such as mode, cache and vfs, from a file: URI only, and ignores the rest.
+// The driver reads these from either form:
+//
+// _pragma: A PRAGMA to run on every new connection, without the PRAGMA
+// keyword, such as "foreign_keys(1)" or "busy_timeout(5000)". It may be given
+// more than once. The values run busy_timeout first and the rest sorted, so
+// their order does not depend on the DSN. SQLite runs them as given, so a DSN
+// carrying _pragma must come from a trusted source, and a bad one fails only
+// once the database is open, after the values before it have taken effect.
+//
+// _journal_mode: The journal mode, one of DELETE, TRUNCATE, PERSIST, MEMORY,
+// WAL and OFF, in any case. It is set after the _pragma values, so that a
+// _pragma=page_size(N) applies to a new database before WAL mode fixes its
+// page size.
+//
+// _txlock: How BEGIN locks the database: "deferred" (the default),
+// "immediate" or "exclusive", in any case. A read-only transaction always
+// begins deferred. See
+// https://www.sqlite.org/lang_transaction.html#deferred_immediate_and_exclusive_transactions
+//
+// Any other parameter whose name starts with '_' is an error. The parameters
+// are checked before the database is opened, so a DSN they reject creates no
+// database file.
+//
+// # Errors
+//
+// An error SQLite reports has a Code method returning its result code,
+// extended where SQLite reports one, such as 2067 for
+// SQLITE_CONSTRAINT_UNIQUE (https://www.sqlite.org/rescode.html). Reach it
+// through an interface:
+//
+//	var e interface{ Code() int }
+//	if errors.As(err, &e) && e.Code()&0xff == 5 { // SQLITE_BUSY
+//		// retry
+//	}
 //
 // # Debug and development versions
 //

@@ -5,7 +5,6 @@
 package sqlite // import "github.com/unaquatic/sqlite"
 
 import (
-	"errors"
 	"os"
 	"path/filepath"
 	"strings"
@@ -14,8 +13,7 @@ import (
 	sqlite3 "github.com/unaquatic/sqlite/internal/lib"
 )
 
-// A database that cannot be opened reports SQLITE_CANTOPEN as an *Error,
-// without a stale message from the handle the failed open returns: the
+// A database that cannot be opened reports SQLITE_CANTOPEN, without a stale message from the handle the failed open returns: the
 // original report saw "out of memory" opening /sys/repro.db on Linux.
 // https://gitlab.com/cznic/sqlite/-/issues/230
 func TestOpenFailure(t *testing.T) {
@@ -25,18 +23,14 @@ func TestOpenFailure(t *testing.T) {
 		t.Fatal(err)
 	}
 	err := openErr(t, filepath.Join(notDir, "child", "x.db"))
-	var e *Error
-	if !errors.As(err, &e) {
-		t.Fatalf("got %T (%v), want *Error", err, err)
+	if code, ok := errorCode(err); !ok || code != sqlite3.SQLITE_CANTOPEN {
+		t.Fatalf("got %v with code %d, %v; want SQLITE_CANTOPEN (%d)", err, code, ok, sqlite3.SQLITE_CANTOPEN)
 	}
-	if e.Code() != sqlite3.SQLITE_CANTOPEN {
-		t.Errorf("Code() = %d, want SQLITE_CANTOPEN (%d)", e.Code(), sqlite3.SQLITE_CANTOPEN)
+	if !strings.Contains(err.Error(), "unable to open database file") {
+		t.Errorf("error %q lacks the canonical message", err)
 	}
-	if !strings.Contains(e.Error(), "unable to open database file") {
-		t.Errorf("error %q lacks the canonical message", e)
-	}
-	if strings.Contains(strings.ToLower(e.Error()), "out of memory") {
-		t.Errorf("error %q carries a stale message", e)
+	if strings.Contains(strings.ToLower(err.Error()), "out of memory") {
+		t.Errorf("error %q carries a stale message", err)
 	}
 }
 
@@ -63,14 +57,10 @@ func TestErrorStaleMessage(t *testing.T) {
 	defer c.Close()
 
 	err = newError(c.tls, c.db, sqlite3.SQLITE_CANTOPEN)
-	var e *Error
-	if !errors.As(err, &e) {
-		t.Fatalf("got %T (%v), want *Error", err, err)
+	if code, ok := errorCode(err); !ok || code != sqlite3.SQLITE_CANTOPEN {
+		t.Errorf("code %d, %v; want SQLITE_CANTOPEN", code, ok)
 	}
-	if e.Code() != sqlite3.SQLITE_CANTOPEN {
-		t.Errorf("Code() = %d, want SQLITE_CANTOPEN", e.Code())
-	}
-	if got, want := e.Error(), "unable to open database file (14)"; got != want {
+	if got, want := err.Error(), "unable to open database file (14)"; got != want {
 		t.Errorf("got %q, want %q", got, want)
 	}
 }

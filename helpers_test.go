@@ -7,6 +7,7 @@ package sqlite // import "github.com/unaquatic/sqlite"
 import (
 	"context"
 	"database/sql"
+	"errors"
 	"path/filepath"
 	"testing"
 
@@ -43,6 +44,16 @@ func tempDB(t testing.TB) *sql.DB {
 func openErr(t testing.TB, dsn string) error {
 	t.Helper()
 	return openDB(t, dsn).Ping()
+}
+
+// errorCode returns the SQLite result code err carries, read the way the
+// package documentation tells callers to, and whether it carries one.
+func errorCode(err error) (int, bool) {
+	var e interface{ Code() int }
+	if errors.As(err, &e) {
+		return e.Code(), true
+	}
+	return 0, false
 }
 
 // execer is implemented by *sql.DB, *sql.Conn and *sql.Tx.

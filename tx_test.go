@@ -7,7 +7,6 @@ package sqlite // import "github.com/unaquatic/sqlite"
 import (
 	"context"
 	"database/sql"
-	"errors"
 	"fmt"
 	"math/rand"
 	"sync"
@@ -89,8 +88,7 @@ func TestTxCommitBusy(t *testing.T) {
 	mustExec(t, tx2, "select * from foo")
 	mustExec(t, tx1, "insert into foo (bar) values (42)")
 	err = tx1.Commit()
-	var e *Error
-	if !errors.As(err, &e) || e.Code() != sqlite3.SQLITE_BUSY {
+	if code, _ := errorCode(err); code != sqlite3.SQLITE_BUSY {
 		t.Fatalf("Commit = %v, want SQLITE_BUSY", err)
 	}
 	if err := tx1.Rollback(); err != sql.ErrTxDone {
