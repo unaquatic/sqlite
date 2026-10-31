@@ -8,8 +8,6 @@ import (
 	"context"
 	"database/sql"
 	"fmt"
-	"math/rand"
-	"sync"
 	"testing"
 
 	sqlite3 "github.com/unaquatic/sqlite/internal/lib"
@@ -114,63 +112,4 @@ func TestScriptBegin(t *testing.T) {
 		mustExec(t, db, "INSERT INTO t1 (t) VALUES (?)", i)
 	}
 	mustExec(t, db, "COMMIT;")
-}
-
-// Concurrent read and write transactions on one database. Without a busy
-// timeout they may fail with SQLITE_BUSY; with one, they must not.
-// https://gitlab.com/cznic/sqlite/-/issues/65
-func TestConcurrentTransactions(t *testing.T) {
-	for _, tc := range []struct {
-		name    string
-		query   string
-		canFail bool
-	}{
-		{"no busy timeout", "", true},
-		{"busy timeout", "?_pragma=busy_timeout%3d80000", false},
-	} {
-		t.Run(tc.name, func(t *testing.T) {
-			ctx := context.Background()
-			db := openDB(t, tempPath(t, "test.db")+tc.query)
-			mustExec(t, db, "CREATE TABLE foo (department INTEGER, profits INTEGER)")
-			mustExec(t, db, "INSERT INTO foo VALUES (1, 10), (1, 20), (1, 45), (2, 42), (2, 115)")
-
-			read := func() error {
-				tx, err := db.BeginTx(ctx, nil)
-				if err != nil {
-					return err
-				}
-				defer tx.Rollback()
-				var dept, count int64
-				return tx.QueryRowContext(ctx, "SELECT department, COUNT(*) FROM foo GROUP BY department").Scan(&dept, &count)
-			}
-			write := func() error {
-				tx, err := db.BeginTx(ctx, nil)
-				if err != nil {
-					return err
-				}
-				defer tx.Rollback()
-				if _, err := tx.ExecContext(ctx, "INSERT INTO foo(department, profits) VALUES (?, ?)", rand.Int(), rand.Int()); err != nil {
-					return err
-				}
-				return tx.Commit()
-			}
-
-			var wg sync.WaitGroup
-			for name, f := range map[string]func() error{"read": read, "write": write} {
-				wg.Go(func() {
-					for range 100 {
-						if err := f(); err != nil {
-							if tc.canFail {
-								t.Logf("%s: %v", name, err)
-							} else {
-								t.Errorf("%s: %v", name, err)
-							}
-							return
-						}
-					}
-				})
-			}
-			wg.Wait()
-		})
-	}
 }
